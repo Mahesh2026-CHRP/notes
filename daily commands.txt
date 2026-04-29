@@ -1,0 +1,2 @@
+ls -t hrapplication_*.dump | tail -n +4 | xargs rm -f  #except latest 3days files remaining will be deleted.
+

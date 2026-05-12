@@ -1,0 +1,89 @@
+name: Backend Staging Auto Deploy
+
+on:
+  push:
+    branches:
+      - staging
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect Changed Services
+        id: changes
+        run: |
+
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+
+          echo "Changed Files:"
+          echo "$CHANGED_FILES"
+
+          SERVICES=""
+
+          if echo "$CHANGED_FILES" | grep -q "IdentityService"; then
+            SERVICES="$SERVICES identity-service"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "UserService"; then
+            SERVICES="$SERVICES user-service"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "LicenseService"; then
+            SERVICES="$SERVICES license-service"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "ClientService"; then
+            SERVICES="$SERVICES client-service"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "XRTrainingService"; then
+            SERVICES="$SERVICES xrtraining-service"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "GateAway.API"; then
+            SERVICES="$SERVICES gateway"
+          fi
+
+          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+
+      - name: Deploy Changed Services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ubuntu
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+
+            cd ~/super-admin-backend/Super_Admin_Portal_Backend
+
+            echo "Pulling latest code..."
+            git fetch origin staging
+            git reset --hard origin/staging
+
+            docker network create super_admin_portal_backend_app-network || true
+
+            SERVICES="${{ steps.changes.outputs.services }}"
+
+            echo "Services to deploy:"
+            echo "$SERVICES"
+
+            for SERVICE in $SERVICES
+            do
+              echo "Deploying $SERVICE"
+
+              docker compose up -d --build --no-deps $SERVICE
+            done
+
+            echo "Cleaning unused docker images..."
+
+            docker image prune -af

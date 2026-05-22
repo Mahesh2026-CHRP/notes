@@ -11,6 +11,7 @@ sudo apt install k6
 
 
 script for only access the site
+===============================
 
 // loadtest.js
 
@@ -29,6 +30,7 @@ export default function () {
 k6 run loadtest.js
 
 #script for access and login
+============================
 
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -40,7 +42,7 @@ export const options = {
 
 export default function () {
   const payload = JSON.stringify({
-    email: 'indusadmin@yopmail.com',
+    email: 'admin@gmail.com',
     password: 'Admin@123',
   });
 
@@ -52,7 +54,7 @@ export default function () {
   };
 
   const res = http.post(
-    'https://industower.xrdashboard.com/api/v1/auth/login',
+    'https://YOUR_API/api/v1/auth/login',
     payload,
     params
   );
